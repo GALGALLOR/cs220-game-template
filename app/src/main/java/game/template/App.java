@@ -19,6 +19,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import javafx.scene.control.Label;
 
 public class App extends Application
 {
@@ -32,19 +33,34 @@ public class App extends Application
     // we use the rectangle to color the squares
     // and the image to place the pieces
     private StackPane[][] grid = new StackPane[SIZE][SIZE];
+    private Board model = new Board();
+    private int selectedRow = -1;
+    private int selectedCol = -1;
+    private Player currentPlayer = Player.WHITE; // WHITE starts
+    private Label turnLabel = new Label("Turn: WHITE");
+
+
+
 
     @Override
     public void start(Stage primaryStage) throws Exception
     {
         root = new VBox();
 
+        // Style the turn label and add it first
+        turnLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-padding: 8;");
+        root.getChildren().add(turnLabel);
+
+        // Then add the menu bar
         root.getChildren().add(createMenuBar());
+
 
         GridPane gridPane = new GridPane();
         // preferred size of the gridpane
         gridPane.setPrefSize(SQUARE_SIZE * 8, SQUARE_SIZE * 8);
         
         root.getChildren().add(gridPane);
+        
 
         // loosely based on https://stackoverflow.com/questions/69339314/how-can-i-draw-over-a-gridpane-of-rectangles-with-an-image-javafx
         for (int row = 0; row < SIZE; row++)
@@ -94,6 +110,8 @@ public class App extends Application
         primaryStage.setTitle("GAME TEMPLATE");
         primaryStage.setScene(scene);
         primaryStage.show();
+
+        drawInitialBoard();
 
         // handler for when we click the close button
         primaryStage.setOnCloseRequest(event -> {
@@ -156,24 +174,63 @@ public class App extends Application
         });
     }
 
-    private void handleMouseClick(MouseEvent event, int row, int col)
-    {
-        System.out.println("Mouse clicked on " + row + ", " + col);
+    private void handleMouseClick(MouseEvent event, int row, int col) {
+        System.out.println("Clicked: " + row + ", " + col);
 
-        // I'm just showing off that you can do this
-        // the proper way to do this is to have a model class
-        // similar to the Board class in Sudoku
-        // and then ask the model what piece is at this row/col
-        grid[row][col].getChildren().forEach(child -> {
-            if (child instanceof ImageView)
-            {
-                String url = ((ImageView) child).getImage().getUrl();
-                String piece = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.'));
-
-                System.out.println("Image found for piece " + piece);
-            }
-        });
+        if (selectedRow == -1 && selectedCol == -1) {
+    // First click - select a piece
+    if (model.isOccupied(row, col) && model.getOwner(row, col) == currentPlayer) {
+        selectedRow = row;
+        selectedCol = col;
+        System.out.println("Selected piece at " + row + ", " + col);
+    } else {
+        System.out.println("Not your turn or empty square.");
     }
+} else {
+    // Second click - attempt to move
+    ChessPiece piece = model.getPiece(selectedRow, selectedCol);
+    Player owner = model.getOwner(selectedRow, selectedCol);
+
+    boolean isValid = false;
+
+    if (owner != currentPlayer) {
+        System.out.println("It's not your turn.");
+    } else {
+        if (piece == ChessPiece.PAWN) {
+            isValid = model.isValidPawnMove(selectedRow, selectedCol, row, col);
+        } else if (piece == ChessPiece.ROOK) {
+            isValid = model.isValidRookMove(selectedRow, selectedCol, row, col);
+        } else if (piece == ChessPiece.BISHOP) {
+            isValid = model.isValidBishopMove(selectedRow, selectedCol, row, col);
+        } else if (piece == ChessPiece.KNIGHT) {
+            isValid = model.isValidKnightMove(selectedRow, selectedCol, row, col);
+        } else if (piece == ChessPiece.KING) {
+            isValid = model.isValidKingMove(selectedRow, selectedCol, row, col);
+        } else if (piece == ChessPiece.QUEEN) {
+            isValid = model.isValidQueenMove(selectedRow, selectedCol, row, col);
+        }
+    }
+
+    if (isValid) {
+        model.setPiece(row, col, piece, owner);
+        model.clearSquare(selectedRow, selectedCol);
+        drawInitialBoard();
+        System.out.println("Moved " + piece + " to " + row + ", " + col);
+
+        // Switch player
+        currentPlayer = (currentPlayer == Player.WHITE) ? Player.BLACK : Player.WHITE;
+        turnLabel.setText("Turn: " + currentPlayer);
+        System.out.println("Next turn: " + currentPlayer);
+    } else {
+        System.out.println("Invalid move.");
+    }
+
+    selectedRow = -1;
+    selectedCol = -1;
+}
+
+    }
+
 
     private void placePiece(Player player, ChessPiece piece, int row, int col)
     {
@@ -236,9 +293,22 @@ public class App extends Application
         menuItem.setOnAction(event -> action.run());
         menu.getItems().add(menuItem);
     }
+    private void drawInitialBoard() {
+        clearBoard();
+        for (int row = 0; row < SIZE; row++) {
+            for (int col = 0; col < SIZE; col++) {
+                if (model.isOccupied(row, col)) {
+                    placePiece(model.getOwner(row, col), model.getPiece(row, col), row, col);
+                }
+            }
+        }
+    }
+    
+
 
     public static void main(String[] args) 
     {
         launch(args);
     }
+
 }
