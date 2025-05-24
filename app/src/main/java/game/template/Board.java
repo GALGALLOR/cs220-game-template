@@ -142,37 +142,38 @@ public class Board {
             // Target must be empty or contain enemy
             return board[toRow][toCol] == null || owners[toRow][toCol] != owner;
         }
-
+        
         public boolean isValidBishopMove(int fromRow, int fromCol, int toRow, int toCol) {
             if (!isInBounds(fromRow, fromCol) || !isInBounds(toRow, toCol)) return false;
 
             ChessPiece piece = board[fromRow][fromCol];
             Player owner = owners[fromRow][fromCol];
 
-            if (piece != ChessPiece.BISHOP && piece!=ChessPiece.QUEEN) return false;
+            if (piece != ChessPiece.BISHOP && piece != ChessPiece.QUEEN) return false;
 
             int rowDiff = toRow - fromRow;
             int colDiff = toCol - fromCol;
 
-            // Check diagonal movement
             if (Math.abs(rowDiff) != Math.abs(colDiff)) return false;
 
-            int rowStep = rowDiff > 0 ? 1 : -1;
-            int colStep = colDiff > 0 ? 1 : -1;
+            int rowStep = Integer.signum(rowDiff);
+            int colStep = Integer.signum(colDiff);
 
             int r = fromRow + rowStep;
             int c = fromCol + colStep;
 
-            // Check that path is clear (excluding the destination)
             while (r != toRow && c != toCol) {
+                if (!isInBounds(r, c)) return false; // 🔐 bounds check
                 if (board[r][c] != null) return false;
                 r += rowStep;
                 c += colStep;
             }
 
-            // Destination must be empty or contain an enemy piece
-            return board[toRow][toCol] == null || owners[toRow][toCol] != owner;
+            // Final destination
+            return isInBounds(toRow, toCol) &&
+                (board[toRow][toCol] == null || owners[toRow][toCol] != owner);
         }
+
 
         public boolean isValidKingMove(int fromRow, int fromCol, int toRow, int toCol) {
             if (!isInBounds(fromRow, fromCol) || !isInBounds(toRow, toCol)) return false;

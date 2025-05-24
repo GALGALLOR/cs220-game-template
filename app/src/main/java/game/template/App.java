@@ -135,8 +135,8 @@ public class App extends Application
     private void drawBoard1()
     {
         clearBoard();
-        placePiece(Player.WHITE, ChessPiece.PAWN, 1, 0);
-        placePiece(Player.WHITE, ChessPiece.PAWN, 2, 0);
+        placePiece(Player.WHITE, ChessPiece.PAWN, 1, 1);
+        placePiece(Player.WHITE, ChessPiece.PAWN, 2, 3);
         placePiece(Player.BLACK, ChessPiece.ROOK, 3, 0);
         placePiece(Player.BLACK, ChessPiece.QUEEN, 4, 0);
     }
@@ -253,6 +253,10 @@ public class App extends Application
             }
 
             if (isValid) {
+                if (piece == ChessPiece.PAWN && (row == 0 || row == 7)) {
+                    // Promote to queen for simplicity (you can expand later)
+                    piece = ChessPiece.QUEEN;
+                }
                 model.setPiece(row, col, piece, owner);
                 model.clearSquare(selectedRow, selectedCol);
                 drawInitialBoard();
