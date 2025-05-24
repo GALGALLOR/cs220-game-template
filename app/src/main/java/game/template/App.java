@@ -38,6 +38,9 @@ public class App extends Application
     private int selectedCol = -1;
     private Player currentPlayer = Player.WHITE; // WHITE starts
     private Label turnLabel = new Label("Turn: WHITE");
+    private boolean gameOver = false;
+
+
 
 
 
@@ -173,43 +176,64 @@ public class App extends Application
             }
         });
     }
+
     private void showAvailableMoves(int fromRow, int fromCol) {
         ChessPiece piece = model.getPiece(fromRow, fromCol);
-        for (int row = 0; row < SIZE; row++) {
-            for (int col = 0; col < SIZE; col++) {
-                boolean isValid = false;
-                switch (piece) {
-                    case PAWN:
-                        isValid = model.isValidPawnMove(fromRow, fromCol, row, col);
-                        break;
-                    case ROOK:
-                        isValid = model.isValidRookMove(fromRow, fromCol, row, col);
-                        break;
-                    case BISHOP:
-                        isValid = model.isValidBishopMove(fromRow, fromCol, row, col);
-                        break;
-                    case KNIGHT:
-                        isValid = model.isValidKnightMove(fromRow, fromCol, row, col);
-                        break;
-                    case KING:
-                        isValid = model.isValidKingMove(fromRow, fromCol, row, col);
-                        break;
-                    case QUEEN:
-                        isValid = model.isValidQueenMove(fromRow, fromCol, row, col);
-                        break;
-                }
-                if (isValid) {
-                    highlightSquare(row, col, "move-option");
-                    
+        Player owner = model.getOwner(fromRow, fromCol);
+
+        boolean inCheck = model.isInCheck(owner);
+
+        for (int toRow = 0; toRow < SIZE; toRow++) {
+            for (int toCol = 0; toCol < SIZE; toCol++) {
+                boolean isValid = switch (piece) {
+                    case PAWN -> model.isValidPawnMove(fromRow, fromCol, toRow, toCol);
+                    case ROOK -> model.isValidRookMove(fromRow, fromCol, toRow, toCol);
+                    case BISHOP -> model.isValidBishopMove(fromRow, fromCol, toRow, toCol);
+                    case KNIGHT -> model.isValidKnightMove(fromRow, fromCol, toRow, toCol);
+                    case KING -> model.isValidKingMove(fromRow, fromCol, toRow, toCol);
+                    case QUEEN -> model.isValidQueenMove(fromRow, fromCol, toRow, toCol);
+                };
+
+                if (!isValid) continue;
+
+                if (inCheck) {
+                    // Simulate the move
+                    ChessPiece tempPiece = model.getPiece(toRow, toCol);
+                    Player tempOwner = model.getOwner(toRow, toCol);
+                    model.setPiece(toRow, toCol, piece, owner);
+                    model.clearSquare(fromRow, fromCol);
+
+                    boolean stillInCheck = model.isInCheck(owner);
+
+                    // Undo
+                    model.setPiece(fromRow, fromCol, piece, owner);
+                    model.setPiece(toRow, toCol, tempPiece, tempOwner);
+
+                    if (!stillInCheck) {
+                        highlightSquare(toRow, toCol, "move-option");
+                    }
+                } else {
+                    highlightSquare(toRow, toCol, "move-option");
                 }
             }
         }
-        // Also highlight the selected piece itself
+
         highlightSquare(fromRow, fromCol, "selected");
     }
 
+    private void disableAllMoves() {
+        gameOver = true;
+        turnLabel.setText("Game Over. " + (currentPlayer == Player.WHITE ? "Black" : "White") + " wins!");
+    }
+
+
 
     private void handleMouseClick(MouseEvent event, int row, int col) {
+        if (gameOver) {
+            System.out.println("Game is over. No more moves allowed.");
+            return;
+        }
+
         clearHighlights(); // Always start by clearing previous highlights
 
         if (selectedRow == -1 && selectedCol == -1) {
@@ -253,18 +277,53 @@ public class App extends Application
             }
 
             if (isValid) {
-                if (piece == ChessPiece.PAWN && (row == 0 || row == 7)) {
-                    // Promote to queen for simplicity (you can expand later)
-                    piece = ChessPiece.QUEEN;
-                }
+                // Simulate the move
+                ChessPiece capturedPiece = model.getPiece(row, col);
+                Player capturedOwner = model.getOwner(row, col);
+
                 model.setPiece(row, col, piece, owner);
                 model.clearSquare(selectedRow, selectedCol);
-                drawInitialBoard();
 
-                // Switch player and update UI
-                currentPlayer = (currentPlayer == Player.WHITE) ? Player.BLACK : Player.WHITE;
-                turnLabel.setText("Turn: " + currentPlayer);
+                boolean kingStillSafe = !model.isInCheck(owner);
+
+                if (kingStillSafe) {
+                    // Promote pawn if needed
+                    if (piece == ChessPiece.PAWN && (row == 0 || row == 7)) {
+                        model.setPiece(row, col, ChessPiece.QUEEN, owner);
+                    }
+
+                    drawInitialBoard();
+                    currentPlayer = (currentPlayer == Player.WHITE) ? Player.BLACK : Player.WHITE;
+                    turnLabel.setText("Turn: " + currentPlayer);
+
+                    if (!model.isKingAlive(currentPlayer)) {
+                        turnLabel.setText("Checkmate! " + (currentPlayer == Player.WHITE ? "Black" : "White") + " wins!");
+                        gameOver = true;
+                        return;
+                    }
+
+                    if (model.isCheckmate(currentPlayer)) {
+                        turnLabel.setText("Checkmate! " + (currentPlayer == Player.WHITE ? "Black" : "White") + " wins!");
+                        disableAllMoves();
+                        return;
+                    }
+
+                } else {
+                    // Undo the move — it's illegal
+                    model.setPiece(selectedRow, selectedCol, piece, owner);
+                    model.setPiece(row, col, capturedPiece, capturedOwner);
+                    System.out.println("Move leaves king in check. Not allowed.");
+                }
             }
+
+            if (!model.isKingAlive(currentPlayer)) {
+                turnLabel.setText("Checkmate! " + (currentPlayer == Player.WHITE ? "Black" : "White") + " wins!");
+                gameOver = true;
+                return;
+            }
+
+
+
 
             selectedRow = -1;
             selectedCol = -1;
@@ -272,8 +331,24 @@ public class App extends Application
 
         }
 
+        if (model.isCheckmate(currentPlayer)) {
+            turnLabel.setText("Checkmate! " + (currentPlayer == Player.WHITE ? "Black" : "White") + " wins!");
+            disableAllMoves(); // You'll need to implement this
+            return;
+        }
 
     }
+    private void restartGame() {
+        model = new Board();
+        currentPlayer = Player.WHITE;
+        turnLabel.setText("Turn: WHITE");
+        selectedRow = -1;
+        selectedCol = -1;
+        clearHighlights();
+        drawInitialBoard();
+        gameOver = false; // Allow moves again
+    }
+
 
 
     private void placePiece(Player player, ChessPiece piece, int row, int col)
@@ -321,15 +396,7 @@ public class App extends Application
         return menuBar;
     }
 
-    private void restartGame() {
-        model = new Board();  // Reset the model
-        currentPlayer = Player.WHITE;  // Reset to White's turn
-        turnLabel.setText("Turn: WHITE");
-        selectedRow = -1;
-        selectedCol = -1;
-        clearHighlights();  // Remove any highlights
-        drawInitialBoard(); // Redraw board from scratch
-    }
+
 
 
     private void addMenuItem(Menu menu, String name, Runnable action)

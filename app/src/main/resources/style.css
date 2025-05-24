@@ -103,13 +103,4 @@
     -fx-opacity: 0.5;
 }
 
-.colors{
-    -fx-background-color:green;
-    -fx-color:green;
-    -fx-opacity:1;
-    -fx-max-width: 70;
-    -fx-max-height: 70;
-    -fx-min-width: 70;
-    -fx-min-height: 70;
 
-}

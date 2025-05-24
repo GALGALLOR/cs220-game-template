@@ -142,7 +142,7 @@ public class Board {
             // Target must be empty or contain enemy
             return board[toRow][toCol] == null || owners[toRow][toCol] != owner;
         }
-        
+
         public boolean isValidBishopMove(int fromRow, int fromCol, int toRow, int toCol) {
             if (!isInBounds(fromRow, fromCol) || !isInBounds(toRow, toCol)) return false;
 
@@ -163,7 +163,7 @@ public class Board {
             int c = fromCol + colStep;
 
             while (r != toRow && c != toCol) {
-                if (!isInBounds(r, c)) return false; // 🔐 bounds check
+                if (!isInBounds(r, c)) return false; //  bounds check
                 if (board[r][c] != null) return false;
                 r += rowStep;
                 c += colStep;
@@ -173,6 +173,39 @@ public class Board {
             return isInBounds(toRow, toCol) &&
                 (board[toRow][toCol] == null || owners[toRow][toCol] != owner);
         }
+        public boolean isSquareUnderAttack(int row, int col, Player kingOwner) {
+            for (int r = 0; r < 8; r++) {
+                for (int c = 0; c < 8; c++) {
+                    if (board[r][c] != null && owners[r][c] != kingOwner) {
+                        ChessPiece attacker = board[r][c];
+                        boolean canAttack = false;
+                        switch (attacker) {
+                            case PAWN:
+                                canAttack = isValidPawnMove(r, c, row, col);
+                                break;
+                            case ROOK:
+                                canAttack = isValidRookMove(r, c, row, col);
+                                break;
+                            case BISHOP:
+                                canAttack = isValidBishopMove(r, c, row, col);
+                                break;
+                            case KNIGHT:
+                                canAttack = isValidKnightMove(r, c, row, col);
+                                break;
+                            case KING:
+                                canAttack = isValidKingMove(r, c, row, col); // small step
+                                break;
+                            case QUEEN:
+                                canAttack = isValidQueenMove(r, c, row, col);
+                                break;
+                        }
+                        if (canAttack) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
 
 
         public boolean isValidKingMove(int fromRow, int fromCol, int toRow, int toCol) {
@@ -186,14 +219,32 @@ public class Board {
             int rowDiff = Math.abs(toRow - fromRow);
             int colDiff = Math.abs(toCol - fromCol);
 
-            // King moves only 1 square in any direction
+            // Only one square in any direction
             if (rowDiff <= 1 && colDiff <= 1 && (rowDiff + colDiff > 0)) {
-                // Destination must be empty or have enemy piece
-                return board[toRow][toCol] == null || owners[toRow][toCol] != owner;
+                // Simulate move
+                ChessPiece targetPiece = board[toRow][toCol];
+                Player targetOwner = owners[toRow][toCol];
+
+                board[toRow][toCol] = piece;
+                board[fromRow][fromCol] = null;
+                owners[toRow][toCol] = owner;
+                owners[fromRow][fromCol] = null;
+
+                boolean isSafe = !isSquareUnderAttack(toRow, toCol, owner);
+
+                // Revert
+                board[fromRow][fromCol] = piece;
+                board[toRow][toCol] = targetPiece;
+                owners[fromRow][fromCol] = owner;
+                owners[toRow][toCol] = targetOwner;
+
+                // Must be safe
+                return isSafe && (targetPiece == null || targetOwner != owner);
             }
 
             return false;
         }
+
 
         public boolean isValidQueenMove(int fromRow, int fromCol, int toRow, int toCol) {
             if (!isInBounds(fromRow, fromCol) || !isInBounds(toRow, toCol)) return false;
@@ -215,6 +266,123 @@ public class Board {
 
             return false;
         }
+        public boolean isKingAlive(Player player) {
+            for (int row = 0; row < 8; row++) {
+                for (int col = 0; col < 8; col++) {
+                    if (board[row][col] == ChessPiece.KING && owners[row][col] == player) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        public boolean isInCheck(Player player) {
+            int kingRow = -1, kingCol = -1;
+
+            // Find the king's position
+            for (int r = 0; r < 8; r++) {
+                for (int c = 0; c < 8; c++) {
+                    if (board[r][c] == ChessPiece.KING && owners[r][c] == player) {
+                        kingRow = r;
+                        kingCol = c;
+                        break;
+                    }
+                }
+            }
+
+            if (kingRow == -1 || kingCol == -1) return true; // King not found (already captured)
+
+            // Check if any opposing piece can attack the king's position
+            for (int r = 0; r < 8; r++) {
+                for (int c = 0; c < 8; c++) {
+                    if (owners[r][c] != player && owners[r][c] != null) {
+                        ChessPiece piece = board[r][c];
+                        boolean canAttack = switch (piece) {
+                            case PAWN -> isValidPawnMove(r, c, kingRow, kingCol);
+                            case ROOK -> isValidRookMove(r, c, kingRow, kingCol);
+                            case BISHOP -> isValidBishopMove(r, c, kingRow, kingCol);
+                            case KNIGHT -> isValidKnightMove(r, c, kingRow, kingCol);
+                            case QUEEN -> isValidQueenMove(r, c, kingRow, kingCol);
+                            case KING -> isValidKingMove(r, c, kingRow, kingCol);
+                        };
+                        if (canAttack) return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        public boolean isCheckmate(Player player) {
+            if (!isInCheck(player)) return false;
+
+            for (int fromRow = 0; fromRow < 8; fromRow++) {
+                for (int fromCol = 0; fromCol < 8; fromCol++) {
+                    if (owners[fromRow][fromCol] == player) {
+                        ChessPiece piece = board[fromRow][fromCol];
+                        for (int toRow = 0; toRow < 8; toRow++) {
+                            for (int toCol = 0; toCol < 8; toCol++) {
+                                boolean valid = switch (piece) {
+                                    case PAWN -> isValidPawnMove(fromRow, fromCol, toRow, toCol);
+                                    case ROOK -> isValidRookMove(fromRow, fromCol, toRow, toCol);
+                                    case BISHOP -> isValidBishopMove(fromRow, fromCol, toRow, toCol);
+                                    case KNIGHT -> isValidKnightMove(fromRow, fromCol, toRow, toCol);
+                                    case QUEEN -> isValidQueenMove(fromRow, fromCol, toRow, toCol);
+                                    case KING -> isValidKingMove(fromRow, fromCol, toRow, toCol);
+                                };
+                                if (valid) {
+                                    // Simulate move
+                                    ChessPiece tempPiece = board[toRow][toCol];
+                                    Player tempOwner = owners[toRow][toCol];
+                                    board[toRow][toCol] = piece;
+                                    owners[toRow][toCol] = player;
+                                    board[fromRow][fromCol] = null;
+                                    owners[fromRow][fromCol] = null;
+
+                                    boolean stillInCheck = isInCheck(player);
+
+                                    // Undo move
+                                    board[fromRow][fromCol] = piece;
+                                    owners[fromRow][fromCol] = player;
+                                    board[toRow][toCol] = tempPiece;
+                                    owners[toRow][toCol] = tempOwner;
+
+                                    if (!stillInCheck) return false;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+        public boolean isMoveLegalWhenInCheck(Player player, int fromRow, int fromCol, int toRow, int toCol) {
+            ChessPiece piece = board[fromRow][fromCol];
+
+            // Simulate move
+            ChessPiece captured = board[toRow][toCol];
+            Player capturedOwner = owners[toRow][toCol];
+
+            board[toRow][toCol] = piece;
+            owners[toRow][toCol] = player;
+            board[fromRow][fromCol] = null;
+            owners[fromRow][fromCol] = null;
+
+            boolean stillInCheck = isInCheck(player);
+
+            // Revert move
+            board[fromRow][fromCol] = piece;
+            owners[fromRow][fromCol] = player;
+            board[toRow][toCol] = captured;
+            owners[toRow][toCol] = capturedOwner;
+
+            return !stillInCheck;
+        }
+
+
+
 
 
     }
