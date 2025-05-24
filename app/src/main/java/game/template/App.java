@@ -173,61 +173,101 @@ public class App extends Application
             }
         });
     }
+    private void showAvailableMoves(int fromRow, int fromCol) {
+        ChessPiece piece = model.getPiece(fromRow, fromCol);
+        for (int row = 0; row < SIZE; row++) {
+            for (int col = 0; col < SIZE; col++) {
+                boolean isValid = false;
+                switch (piece) {
+                    case PAWN:
+                        isValid = model.isValidPawnMove(fromRow, fromCol, row, col);
+                        break;
+                    case ROOK:
+                        isValid = model.isValidRookMove(fromRow, fromCol, row, col);
+                        break;
+                    case BISHOP:
+                        isValid = model.isValidBishopMove(fromRow, fromCol, row, col);
+                        break;
+                    case KNIGHT:
+                        isValid = model.isValidKnightMove(fromRow, fromCol, row, col);
+                        break;
+                    case KING:
+                        isValid = model.isValidKingMove(fromRow, fromCol, row, col);
+                        break;
+                    case QUEEN:
+                        isValid = model.isValidQueenMove(fromRow, fromCol, row, col);
+                        break;
+                }
+                if (isValid) {
+                    highlightSquare(row, col, "move-option");
+                    
+                }
+            }
+        }
+        // Also highlight the selected piece itself
+        highlightSquare(fromRow, fromCol, "selected");
+    }
+
 
     private void handleMouseClick(MouseEvent event, int row, int col) {
-        System.out.println("Clicked: " + row + ", " + col);
+        clearHighlights(); // Always start by clearing previous highlights
 
         if (selectedRow == -1 && selectedCol == -1) {
-    // First click - select a piece
-    if (model.isOccupied(row, col) && model.getOwner(row, col) == currentPlayer) {
-        selectedRow = row;
-        selectedCol = col;
-        System.out.println("Selected piece at " + row + ", " + col);
-    } else {
-        System.out.println("Not your turn or empty square.");
-    }
-} else {
-    // Second click - attempt to move
-    ChessPiece piece = model.getPiece(selectedRow, selectedCol);
-    Player owner = model.getOwner(selectedRow, selectedCol);
+            if (model.isOccupied(row, col) && model.getOwner(row, col) == currentPlayer) {
+                selectedRow = row;
+                selectedCol = col;
+                showAvailableMoves(row, col);  // 🔥 Show moves
+            } else {
+                System.out.println("Not your turn or empty square.");
+            }
+        } else {
+            // Second click - attempt to move
+            ChessPiece piece = model.getPiece(selectedRow, selectedCol);
+            Player owner = model.getOwner(selectedRow, selectedCol);
 
-    boolean isValid = false;
+            boolean isValid = false;
 
-    if (owner != currentPlayer) {
-        System.out.println("It's not your turn.");
-    } else {
-        if (piece == ChessPiece.PAWN) {
-            isValid = model.isValidPawnMove(selectedRow, selectedCol, row, col);
-        } else if (piece == ChessPiece.ROOK) {
-            isValid = model.isValidRookMove(selectedRow, selectedCol, row, col);
-        } else if (piece == ChessPiece.BISHOP) {
-            isValid = model.isValidBishopMove(selectedRow, selectedCol, row, col);
-        } else if (piece == ChessPiece.KNIGHT) {
-            isValid = model.isValidKnightMove(selectedRow, selectedCol, row, col);
-        } else if (piece == ChessPiece.KING) {
-            isValid = model.isValidKingMove(selectedRow, selectedCol, row, col);
-        } else if (piece == ChessPiece.QUEEN) {
-            isValid = model.isValidQueenMove(selectedRow, selectedCol, row, col);
+            if (owner != currentPlayer) {
+                System.out.println("It's not your turn.");
+            } else {
+                switch (piece) {
+                    case PAWN:
+                        isValid = model.isValidPawnMove(selectedRow, selectedCol, row, col);
+                        break;
+                    case ROOK:
+                        isValid = model.isValidRookMove(selectedRow, selectedCol, row, col);
+                        break;
+                    case BISHOP:
+                        isValid = model.isValidBishopMove(selectedRow, selectedCol, row, col);
+                        break;
+                    case KNIGHT:
+                        isValid = model.isValidKnightMove(selectedRow, selectedCol, row, col);
+                        break;
+                    case KING:
+                        isValid = model.isValidKingMove(selectedRow, selectedCol, row, col);
+                        break;
+                    case QUEEN:
+                        isValid = model.isValidQueenMove(selectedRow, selectedCol, row, col);
+                        break;
+                }
+            }
+
+            if (isValid) {
+                model.setPiece(row, col, piece, owner);
+                model.clearSquare(selectedRow, selectedCol);
+                drawInitialBoard();
+
+                // Switch player and update UI
+                currentPlayer = (currentPlayer == Player.WHITE) ? Player.BLACK : Player.WHITE;
+                turnLabel.setText("Turn: " + currentPlayer);
+            }
+
+            selectedRow = -1;
+            selectedCol = -1;
+            clearHighlights(); // 🔥 clear all after second click
+
         }
-    }
 
-    if (isValid) {
-        model.setPiece(row, col, piece, owner);
-        model.clearSquare(selectedRow, selectedCol);
-        drawInitialBoard();
-        System.out.println("Moved " + piece + " to " + row + ", " + col);
-
-        // Switch player
-        currentPlayer = (currentPlayer == Player.WHITE) ? Player.BLACK : Player.WHITE;
-        turnLabel.setText("Turn: " + currentPlayer);
-        System.out.println("Next turn: " + currentPlayer);
-    } else {
-        System.out.println("Invalid move.");
-    }
-
-    selectedRow = -1;
-    selectedCol = -1;
-}
 
     }
 
@@ -303,6 +343,37 @@ public class App extends Application
             }
         }
     }
+    private void clearHighlights() {
+        for (int row = 0; row < SIZE; row++) {
+            for (int col = 0; col < SIZE; col++) {
+                Rectangle rect = (Rectangle) grid[row][col].getChildren().get(0);
+
+                // Restore the default color
+                if ((row + col) % 2 == 0) {
+                    rect.setFill(Color.ANTIQUEWHITE);  // for white-square
+                } else {
+                    rect.setFill(Color.CHOCOLATE);     // for black-square
+                }
+            }
+        }
+    }
+
+
+
+    private void highlightSquare(int row, int col, String type) {
+        Rectangle rect = (Rectangle) grid[row][col].getChildren().get(0);
+
+        switch (type) {
+            case "selected":
+                rect.setFill(Color.GOLD);
+                break;
+            case "move-option":
+                rect.setFill(Color.GOLD);
+                break;
+        }
+    }
+
+
     
 
 

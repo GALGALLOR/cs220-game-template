@@ -39,8 +39,8 @@
 }
 
 .white-square {
-    /*
-    -fx-font-size: 40;
+    
+    /*-fx-font-size: 40;
     -fx-font-family: "Courier New";
     -fx-border-color: white;
     -fx-border-width: 0.5;    
@@ -50,6 +50,7 @@
     -fx-min-width: 70;
     -fx-min-height: 70;
     -fx-fill: antiquewhite;
+    
 }
 
 .black-square {
@@ -92,3 +93,23 @@
     -fx-border-width: 0 2 2 0;
 }
 
+
+
+.move-option {
+    -fx-opacity: 0.5;
+}
+
+.selected {
+    -fx-opacity: 0.5;
+}
+
+.colors{
+    -fx-background-color:green;
+    -fx-color:green;
+    -fx-opacity:1;
+    -fx-max-width: 70;
+    -fx-max-height: 70;
+    -fx-min-width: 70;
+    -fx-min-height: 70;
+
+}
