@@ -20,6 +20,10 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.scene.control.Label;
+import java.util.List;
+import java.util.Optional;
+import javafx.scene.control.ChoiceDialog;
+
 
 public class App extends Application
 {
@@ -288,9 +292,13 @@ public class App extends Application
 
                 if (kingStillSafe) {
                     // Promote pawn if needed
-                    if (piece == ChessPiece.PAWN && (row == 0 || row == 7)) {
-                        model.setPiece(row, col, ChessPiece.QUEEN, owner);
-                    }
+                if (piece == ChessPiece.PAWN && (row == 0 || row == 7)) {
+                    ChessPiece promotedPiece = showPromotionDialog(owner);
+                    model.setPiece(row, col, promotedPiece, owner);
+                } else {
+                    model.setPiece(row, col, piece, owner);
+                }
+
 
                     drawInitialBoard();
                     currentPlayer = (currentPlayer == Player.WHITE) ? Player.BLACK : Player.WHITE;
@@ -348,6 +356,17 @@ public class App extends Application
         drawInitialBoard();
         gameOver = false; // Allow moves again
     }
+    private ChessPiece showPromotionDialog(Player player) {
+        List<ChessPiece> choices = List.of(ChessPiece.QUEEN, ChessPiece.ROOK, ChessPiece.BISHOP, ChessPiece.KNIGHT);
+        ChoiceDialog<ChessPiece> dialog = new ChoiceDialog<>(ChessPiece.QUEEN, choices);
+        dialog.setTitle("Pawn Promotion");
+        dialog.setHeaderText("Choose piece for promotion");
+        dialog.setContentText("Promote pawn to:");
+
+        Optional<ChessPiece> result = dialog.showAndWait();
+        return result.orElse(ChessPiece.QUEEN); // Default to Queen if closed
+    }
+
 
 
 
