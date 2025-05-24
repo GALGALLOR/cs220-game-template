@@ -303,33 +303,34 @@ public class App extends Application
     {
         return new ImageView(getClass().getResource("/assets/" + name).toExternalForm());
     }
-
-    private MenuBar createMenuBar()
-    {
+    private MenuBar createMenuBar() {
         MenuBar menuBar = new MenuBar();
-    	menuBar.getStyleClass().add("menubar");
+        menuBar.getStyleClass().add("menubar");
 
-        //
-        // File Menu
-        //
-    	Menu fileMenu = new Menu("File");
+        Menu fileMenu = new Menu("File");
 
         addMenuItem(fileMenu, "Load from file", () -> {
             System.out.println("Load from file");
         });
 
-        addMenuItem(fileMenu, "board1", () -> {
-            drawBoard1();
-        });
-
-        addMenuItem(fileMenu, "board2", () -> {
-            drawBoard2();
-        });
+        addMenuItem(fileMenu, "board1", this::drawBoard1);
+        addMenuItem(fileMenu, "board2", this::drawBoard2);
+        addMenuItem(fileMenu, "Restart Game", this::restartGame); // <== Added
 
         menuBar.getMenus().add(fileMenu);
-
         return menuBar;
     }
+
+    private void restartGame() {
+        model = new Board();  // Reset the model
+        currentPlayer = Player.WHITE;  // Reset to White's turn
+        turnLabel.setText("Turn: WHITE");
+        selectedRow = -1;
+        selectedCol = -1;
+        clearHighlights();  // Remove any highlights
+        drawInitialBoard(); // Redraw board from scratch
+    }
+
 
     private void addMenuItem(Menu menu, String name, Runnable action)
     {
